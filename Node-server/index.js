@@ -1,5 +1,3 @@
-const fs = require("fs");
-
 let WebSocketServer = require("ws").Server,
   wss = new WebSocketServer({ port: 8188 });
 
@@ -8,9 +6,10 @@ wss.on("connection", function (ws) {
   ws.on("pong", function (msg) {
     console.log("msg", msg.toString());
   });
-  ws.on("message", function (message) {
+    ws.on("message", function (message) {
+      console.log("接收",message.toString())
     wss.clients.forEach(function each(client) {
-      console.log("数量", wss.clients);
+      // 原样转发数据
       client.send(message);
     });
   });

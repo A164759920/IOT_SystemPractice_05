@@ -1,6 +1,82 @@
-wsServer = "ws://127.0.0.1:8188/"
 import asyncio
 import websockets
+# import RPi.GPIO as GPIO
+import time
+
+# ######################### RASPBERRY_PART ######################### #
+
+makerobo_RelayPin = 11  # 定义继电器管脚为Pin11
+makerobo_TRIG = 11  # 超声波模块Tring控制管脚
+makerobo_ECHO = 12  # 超声波模块Echo控制管脚
+max_distance = 20
+
+
+# 初始化工作
+# def makerobo_setup():
+#     GPIO.setmode(GPIO.BOARD)  # 采用实际的物理管脚给GPIO口
+#     GPIO.setwarning(False)  # 去除GPIO警告
+#
+#     # 继电器初始化
+#     GPIO.setup(makerobo_RelayPin, GPIO.OUT)  # 设置Pin模式为输出模式
+#     GPIO.output(makerobo_RelayPin, GPIO.LOW)  # 关闭继电器
+#
+#     # 超声波初始化
+#     GPIO.setup(makerobo_TRIG, GPIO.OUT)  # Tring设置为输出模式
+#     GPIO.setup(makerobo_ECHO, GPIO.IN)  # Echo设置为输入模式
+#
+#
+# # 释放资源
+# def makerobo_destroy():
+#     GPIO.output(makerobo_RelayPin, GPIO.LOW)  # 关闭继电器
+#     GPIO.cleanup()  # 释放资源
+#
+#
+# # 超声波计算距离函数
+# def ur_disMeasure():
+#     GPIO.output(makerobo_TRIG, 0)  # 开始起始
+#     time.sleep(0.000002)  # 延时2us
+#
+#     GPIO.output(makerobo_TRIG, 1)  # 超声波启动信号，延时10us
+#     time.sleep(0.00001)  # 发出超声波脉冲
+#     GPIO.output(makerobo_TRIG, 0)  # 设置为低电平
+#
+#     while GPIO.input(makerobo_ECHO) == 0:  # 等待回传信号
+#         us_a = 0
+#     us_time1 = time.time()  # 获取当前时间
+#     while GPIO.input(makerobo_ECHO) == 1:  # 回传信号截止信息
+#         us_a = 1
+#     us_time2 = time.time()  # 获取当前时间
+#
+#     us_during = us_time2 - us_time1  # 转换微秒级的时间
+#
+#     # 声速在空气中的传播速度为340m/s, 超声波要经历一个发送信号和一个回波信息，
+#     # 计算公式如下所示：
+#     return us_during * 340 / 2 * 100  # 求出距离
+#
+#
+# # 继电器自动控制器
+# def relay_controller(distance):
+#     # 超出距离,关闭继电器
+#     if distance >= max_distance:
+#         GPIO.output(makerobo_RelayPin, GPIO.LOW)
+#     if distance <= max_distance:
+#         GPIO.output(makerobo_RelayPin, GPIO.HIGH)
+#
+#
+# def rasp_loop():
+#     while True:
+#         us_dis = ur_disMeasure()  # 获取超声波计算距离
+#         relay_controller(us_dis)
+#
+
+# ######################### WEBSOCKETS ######################### #
+
+wsServer = "ws://127.0.0.1:8188/"
+global_ws = None
+
+def createDataFrame(dataType, payload):
+    frame = "rasp," + str(dataType) + "," + str(payload)
+    return frame
 
 async def on_message(message):
     print("Received message:", message)
@@ -11,28 +87,63 @@ async def on_error(error):
 async def on_close():
     print("WebSocket connection closed")
 
-# async def send_msg(webSocket):
+def msg_handler(message):
+    decoded_message = message.decode()
+    # 判断 clientName
+    if "," in decoded_message:
+        parts = decoded_message.split(",")
+        clientName = parts[0]
+        clientFunc = parts[1]
+        clientPayload = parts[2]
+    else:
+        clientName = ""
+        clientFunc = ""
+        clientPayload = ""
+    if clientName == "H5":
+        if clientFunc == "command":
+            if clientPayload == "relay_on":
+                print("打开继电器")
+                # GPIO.output(makerobo_RelayPin, GPIO.HIGH)
+            if clientPayload == "relay_off":
+                print("关闭继电器")
+                # GPIO.output(makerobo_RelayPin, GPIO.LOW)
+    else:
+        print("非H5不处理")
+
+
+async def send_message(websocket):
+    while True:
+        # 模拟需要发送的数据，这里使用字符串 "data" 作为示例
+        data = createDataFrame("data_dis", 20)
+        # 发送数据到服务器
+        await websocket.send(data)
+        # 等待一秒
+        await asyncio.sleep(1)
+
+
+async def receive_message(websocket):
+    while True:
+        # 接收服务器发送的数据
+        message = await websocket.recv()
+        msg_handler(message)
 
 
 async def connect_websocket():
-    async with websockets.connect(wsServer) as ws:
-        while True:
-            try:
-                # 发送消息到服务器
-                await ws.send("Hello from client")
-                message = await ws.recv()
+    try:
+        async with websockets.connect(wsServer) as ws:
+            global global_ws
+            global_ws = ws
+            # tasks = [send_message(ws), receive_message(ws), rasp_loop()]
+            tasks = [send_message(ws), receive_message(ws)]
+            await asyncio.gather(*tasks)
+    except KeyboardInterrupt:
+        print("按键错误")
+       #  makerobo_destroy()
 
-                await on_message(message)
 
+if __name__ == '__main__':
+    # makerobo_setup()
 
-
-            except websockets.ConnectionClosed:
-                await on_close()
-                break
-            except Exception as e:
-                await on_error(e)
-
-# 创建并运行事件循环
-loop = asyncio.get_event_loop()
-loop.run_until_complete(connect_websocket())
-
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(connect_websocket())
+    loop.close()
