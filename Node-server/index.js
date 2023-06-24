@@ -6,12 +6,14 @@ wss.on("connection", function (ws) {
   ws.on("pong", function (msg) {
     console.log("msg", msg.toString());
   });
-    ws.on("message", function (message) {
-      console.log("接收",message.toString())
-    wss.clients.forEach(function each(client) {
-      // 原样转发数据
-      client.send(message);
-    });
+  ws.on("message", function (message) {
+    console.log("接收", message.toString());
+    if (message) {
+      wss.clients.forEach(function each(client) {
+        // 原样转发数据
+        client.send(message);
+      });
+    }
   });
 });
 // const interval = setInterval(function ping() {
@@ -23,7 +25,7 @@ wss.on("connection", function (ws) {
 // }, 5 * 1000);
 
 wss.on("headers", (res) => {
-  console.log("头部", res);
+  console.log("新客户端连接", res);
 });
 wss.on("error", (error) => {
   console.log("错误");

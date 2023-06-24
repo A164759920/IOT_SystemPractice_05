@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "serve": "nodemon index.js"
+  },
   "dependencies": {
     "ws": "^8.13.0"
   }
