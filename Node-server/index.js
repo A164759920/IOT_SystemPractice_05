@@ -8,25 +8,18 @@ wss.on("connection", function (ws) {
   });
   ws.on("message", function (message) {
     console.log("接收", message.toString());
+    // 非空消息
     if (message) {
+      // 遍历客户端列表，原样转发数据
       wss.clients.forEach(function each(client) {
-        // 原样转发数据
         client.send(message);
       });
     }
   });
 });
-// const interval = setInterval(function ping() {
-//   wss.clients.forEach(function each(ws) {
-//     // if (ws.isAlive === false) return ws.terminate();
-//     // ws.isAlive = false;
-//     ws.ping("ping");
-//   });
-// }, 5 * 1000);
-
 wss.on("headers", (res) => {
   console.log("新客户端连接", res);
 });
 wss.on("error", (error) => {
-  console.log("错误");
+  console.log("错误", error);
 });

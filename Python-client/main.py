@@ -123,7 +123,7 @@ async def on_close():
 def msg_handler(message):
     global relay_state, relay_lock_state
     decoded_message = message.decode()
-    # 判断 clientName
+    # 解析数据帧
     if "," in decoded_message:
         parts = decoded_message.split(",")
         clientName = parts[0]
@@ -201,7 +201,6 @@ async def connect_websocket():
             global_ws = ws
             disThread_task = asyncio.ensure_future(create_disThread_loop())
             tasks = [send_message(ws), receive_message(ws), disThread_task]
-            # tasks = [send_message(ws), receive_message(ws)]
             await asyncio.gather(*tasks)
     except KeyboardInterrupt:
         await on_close()
